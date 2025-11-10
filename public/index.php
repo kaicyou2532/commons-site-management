@@ -25,9 +25,18 @@ function loadEnv($path) {
 
 loadEnv(__DIR__ . '/.env');
 
-// Next.jsアプリのパス
-$nextAppPath = '/var/www/next-app';
-$nextEnvPath = getenv('NEXTJS_ENV_FILE') ?: '/var/www/env/next.env';
+// Next.jsアプリのパス（Dockerコンテナ内の場合は /var/www/next-app）
+// ホストマシンで実行する場合は、プロジェクトルートからの相対パス
+$isDocker = file_exists('/.dockerenv');
+if ($isDocker) {
+    $nextAppPath = '/var/www/next-app';
+    $nextEnvPath = '/var/www/env/next.env';
+} else {
+    // ホストマシンの場合
+    $projectRoot = dirname(__DIR__);
+    $nextAppPath = $projectRoot . '/next-app';
+    $nextEnvPath = $projectRoot . '/env/next.env';
+}
 
 // エラーメッセージ
 $error = '';
