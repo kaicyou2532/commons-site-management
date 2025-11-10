@@ -290,11 +290,12 @@ $isRunning = !empty($statusOutput);
         <div class="info">
             <h3>使い方</h3>
             <p>
-                <strong>ビルドして起動:</strong> ビルドと起動を一括実行します<br>
-                <strong>ビルド:</strong> Next.jsアプリケーションをビルドします<br>
-                <strong>起動:</strong> ビルドされたNext.jsアプリケーションを起動します<br>
-                <strong>停止:</strong> 実行中のNext.jsアプリケーションを停止します<br>
-                <strong>状態確認:</strong> 現在のプロセス状態を確認します
+                <strong>ビルドして起動:</strong> バックグラウンドでビルドと起動を実行<br>
+                <strong>ログ確認:</strong> ビルドとデプロイの進捗ログを表示<br>
+                <strong>ビルド:</strong> Next.jsアプリケーションをビルド<br>
+                <strong>起動:</strong> ビルド済みアプリケーションを起動<br>
+                <strong>停止:</strong> 実行中のアプリケーションを停止<br>
+                <strong>状態確認:</strong> 現在のプロセス状態を確認
             </p>
         </div>
     </div>
