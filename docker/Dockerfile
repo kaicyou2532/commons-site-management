@@ -23,7 +23,10 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && mkdir -p /var/www/next-app \
     && chown -R www-data:www-data /var/www/next-app \
-    && chmod -R 775 /var/www/next-app
+    && chmod -R 775 /var/www/next-app \
+    && mkdir -p /var/www/.npm \
+    && chown -R www-data:www-data /var/www/.npm \
+    && chmod -R 775 /var/www/.npm
 
 EXPOSE 80
 
