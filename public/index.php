@@ -52,14 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exec("pkill -f 'npm run start'");
         exec("pkill -f 'next start'");
         
-        // npmキャッシュディレクトリとnext-appディレクトリの権限を修正
-        $output[] = "=== 権限設定中 ===";
-        exec("mkdir -p /var/www/.npm 2>&1", $permOutput);
-        exec("chown -R www-data:www-data /var/www/.npm 2>&1", $permOutput);
-        exec("chown -R www-data:www-data $nextAppPath 2>&1", $permOutput);
-        $output = array_merge($output, $permOutput);
-        $output[] = "";
-        
         // 環境変数の設定
         $envCmd = '';
         if (file_exists($nextEnvPath)) {

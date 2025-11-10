@@ -20,14 +20,17 @@ COPY docker/apache-config.conf /etc/apache2/sites-available/000-default.conf
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && mkdir -p /var/www/next-app \
-    && chown -R www-data:www-data /var/www/next-app \
-    && chmod -R 775 /var/www/next-app \
-    && mkdir -p /var/www/.npm \
-    && chown -R www-data:www-data /var/www/.npm \
-    && chmod -R 775 /var/www/.npm
+    && chmod -R 755 /var/www/html
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+mkdir -p /var/www/.npm\n\
+chown -R www-data:www-data /var/www/next-app /var/www/.npm\n\
+chmod -R 775 /var/www/next-app /var/www/.npm\n\
+exec apache2-foreground\n\
+' > /usr/local/bin/start.sh \
+    && chmod +x /usr/local/bin/start.sh
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/start.sh"]
