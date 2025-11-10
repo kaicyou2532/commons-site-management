@@ -56,29 +56,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exec($command, $output, $returnCode);
         $output[] = "Next.jsアプリケーションを起動しました。";
     } elseif ($action === 'deploy') {
-        // ビルドと起動を連続実行
+        // ビルドと起動を連続実行（バックグラウンド）
         // まず既存のプロセスを停止
         exec("pkill -f 'npm run start'");
         exec("pkill -f 'next start'");
         
-        // ビルド実行
-        $buildCommand = "cd $nextAppPath && npm run build 2>&1";
+        // ログファイルをクリア
+        $logFile = '/tmp/nextjs-build.log';
+        file_put_contents($logFile, '');
+        
+        // ビルドと起動をバックグラウンドで実行
+        $deployCommand = "cd $nextAppPath && npm run build > $logFile 2>&1 && npm run start >> $logFile 2>&1 &";
         if (file_exists($nextEnvPath)) {
-            $buildCommand = "export \$(cat $nextEnvPath | xargs) && " . $buildCommand;
+            $deployCommand = "export \$(cat $nextEnvPath | xargs) && " . $deployCommand;
         }
         
-        exec($buildCommand, $output, $returnCode);
+        exec($deployCommand . " > /dev/null 2>&1 &");
         
-        if ($returnCode === 0) {
-            // ビルド成功時のみ起動
-            $startCommand = "cd $nextAppPath && npm run start >> /tmp/nextjs.log 2>&1 &";
-            if (file_exists($nextEnvPath)) {
-                $startCommand = "export \$(cat $nextEnvPath | xargs) && " . $startCommand;
-            }
-            
-            exec($startCommand);
-            $output[] = "\n--- 起動コマンドを実行しました ---";
-            $output[] = "Next.jsアプリケーションがバックグラウンドで起動しています。";
+        $output[] = "ビルドと起動をバックグラウンドで実行中...";
+        $output[] = "進捗を確認するには「ログ確認」ボタンをクリックしてください。";
+    } elseif ($action === 'logs') {
+        // ログファイルの内容を表示
+        $logFile = '/tmp/nextjs-build.log';
+        if (file_exists($logFile)) {
+            $output = explode("\n", file_get_contents($logFile));
+        } else {
+            $output[] = "ログファイルが見つかりません。";
         }
     } elseif ($action === 'stop') {
         // Next.jsプロセスの停止
@@ -258,6 +261,9 @@ $isRunning = !empty($statusOutput);
             <div class="buttons">
                 <button type="submit" name="action" value="deploy">
                     ビルドして起動
+                </button>
+                <button type="submit" name="action" value="logs">
+                    ログ確認
                 </button>
                 <button type="submit" name="action" value="build">
                     ビルド
