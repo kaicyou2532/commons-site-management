@@ -61,6 +61,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         exec($command, $output, $returnCode);
         $success = 'Next.jsアプリケーションを起動しました。';
+    } elseif ($action === 'deploy') {
+        // ビルドと起動を連続実行
+        // まず既存のプロセスを停止
+        exec("pkill -f 'npm run start'", $output, $returnCode);
+        exec("pkill -f 'next start'", $output, $returnCode);
+        
+        // ビルド実行
+        $buildCommand = "cd $nextAppPath && npm run build 2>&1";
+        if (file_exists($nextEnvPath)) {
+            $buildCommand = "export \$(cat $nextEnvPath | xargs) && " . $buildCommand;
+        }
+        
+        exec($buildCommand, $output, $returnCode);
+        
+        if ($returnCode === 0) {
+            // ビルド成功時のみ起動
+            $startCommand = "cd $nextAppPath && npm run start > /dev/null 2>&1 &";
+            if (file_exists($nextEnvPath)) {
+                $startCommand = "export \$(cat $nextEnvPath | xargs) && " . $startCommand;
+            }
+            
+            exec($startCommand);
+            $success = 'ビルドと起動が完了しました。';
+        } else {
+            $error = 'ビルドに失敗しました。';
+        }
     } elseif ($action === 'stop') {
         // Next.jsプロセスの停止
         exec("pkill -f 'npm run start'", $output, $returnCode);
@@ -91,149 +117,140 @@ $isRunning = !empty($statusOutput);
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border: 2px solid #d9ae4c;
             padding: 40px;
         }
         
         h1 {
-            color: #333;
+            color: #d9ae4c;
             margin-bottom: 30px;
-            font-size: 32px;
+            font-size: 28px;
             text-align: center;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         .status {
             padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             text-align: center;
-            font-weight: bold;
+            font-weight: 500;
+            border: 1px solid #d9ae4c;
+            background: white;
         }
         
         .status.running {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            color: #d9ae4c;
         }
         
         .status.stopped {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            color: #999;
         }
         
         .alert {
             padding: 15px;
-            border-radius: 5px;
             margin-bottom: 20px;
+            border: 1px solid #d9ae4c;
         }
         
         .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #fffef8;
+            color: #333;
         }
         
         .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fff5f5;
+            color: #333;
+            border-color: #ccc;
         }
         
         .buttons {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
         }
         
         button {
             padding: 15px 30px;
-            border: none;
-            border-radius: 5px;
+            border: 2px solid #d9ae4c;
+            background: white;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.3s;
+            color: #333;
         }
         
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        
-        .btn-build {
-            background: #667eea;
-            color: white;
-        }
-        
-        .btn-start {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-stop {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-status {
-            background: #17a2b8;
+            background: #d9ae4c;
             color: white;
         }
         
         .output {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
             padding: 20px;
             margin-top: 20px;
             max-height: 400px;
             overflow-y: auto;
         }
         
+        .output h3 {
+            color: #d9ae4c;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
         .output pre {
             white-space: pre-wrap;
             word-wrap: break-word;
             font-family: 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 13px;
+            color: #333;
+            line-height: 1.6;
         }
         
         .info {
-            background: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 20px;
+            background: white;
+            border: 1px solid #d9ae4c;
+            padding: 20px;
+            margin-top: 30px;
         }
         
         .info h3 {
-            color: #004085;
-            margin-bottom: 10px;
+            color: #d9ae4c;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
         }
         
         .info p {
-            color: #004085;
-            line-height: 1.6;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        .info strong {
+            color: #d9ae4c;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Commons Site Management</h1>
+        <h1>COMMONS SITE MANAGEMENT</h1>
         
         <div class="status <?php echo $isRunning ? 'running' : 'stopped'; ?>">
-            <?php echo $isRunning ? '● Next.js アプリケーション実行中' : '○ Next.js アプリケーション停止中'; ?>
+            <?php echo $isRunning ? 'Next.js アプリケーション実行中' : 'Next.js アプリケーション停止中'; ?>
         </div>
         
         <?php if ($success): ?>
@@ -246,33 +263,37 @@ $isRunning = !empty($statusOutput);
         
         <form method="POST">
             <div class="buttons">
-                <button type="submit" name="action" value="build" class="btn-build">
-                    🔨 ビルド
+                <button type="submit" name="action" value="deploy">
+                    ビルドして起動
                 </button>
-                <button type="submit" name="action" value="start" class="btn-start">
-                    ▶️ 起動
+                <button type="submit" name="action" value="build">
+                    ビルド
                 </button>
-                <button type="submit" name="action" value="stop" class="btn-stop">
-                    ⏹️ 停止
+                <button type="submit" name="action" value="start">
+                    起動
                 </button>
-                <button type="submit" name="action" value="status" class="btn-status">
-                    📊 状態確認
+                <button type="submit" name="action" value="stop">
+                    停止
+                </button>
+                <button type="submit" name="action" value="status">
+                    状態確認
                 </button>
             </div>
         </form>
         
         <?php if (!empty($output)): ?>
             <div class="output">
-                <h3>コマンド出力:</h3>
+                <h3>コマンド出力</h3>
                 <pre><?php echo htmlspecialchars(implode("\n", $output)); ?></pre>
             </div>
         <?php endif; ?>
         
         <div class="info">
-            <h3>📋 使い方</h3>
+            <h3>使い方</h3>
             <p>
-                <strong>ビルド:</strong> Next.jsアプリケーションをビルドします（npm run build）<br>
-                <strong>起動:</strong> ビルドされたNext.jsアプリケーションを起動します（npm run start）<br>
+                <strong>ビルドして起動:</strong> ビルドと起動を一括実行します<br>
+                <strong>ビルド:</strong> Next.jsアプリケーションをビルドします<br>
+                <strong>起動:</strong> ビルドされたNext.jsアプリケーションを起動します<br>
                 <strong>停止:</strong> 実行中のNext.jsアプリケーションを停止します<br>
                 <strong>状態確認:</strong> 現在のプロセス状態を確認します
             </p>
