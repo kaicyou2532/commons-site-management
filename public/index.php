@@ -46,26 +46,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         exec($command, $output, $returnCode);
-        
-        if ($returnCode === 0) {
-            $success = 'ビルドが完了しました。';
-        } else {
-            $error = 'ビルドに失敗しました。';
-        }
     } elseif ($action === 'start') {
         // Next.jsの起動
-        $command = "cd $nextAppPath && npm run start > /dev/null 2>&1 &";
+        $command = "cd $nextAppPath && npm run start >> /tmp/nextjs.log 2>&1 &";
         if (file_exists($nextEnvPath)) {
             $command = "export \$(cat $nextEnvPath | xargs) && " . $command;
         }
         
         exec($command, $output, $returnCode);
-        $success = 'Next.jsアプリケーションを起動しました。';
+        $output[] = "Next.jsアプリケーションを起動しました。";
     } elseif ($action === 'deploy') {
         // ビルドと起動を連続実行
         // まず既存のプロセスを停止
-        exec("pkill -f 'npm run start'", $output, $returnCode);
-        exec("pkill -f 'next start'", $output, $returnCode);
+        exec("pkill -f 'npm run start'");
+        exec("pkill -f 'next start'");
         
         // ビルド実行
         $buildCommand = "cd $nextAppPath && npm run build 2>&1";
@@ -77,21 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($returnCode === 0) {
             // ビルド成功時のみ起動
-            $startCommand = "cd $nextAppPath && npm run start > /dev/null 2>&1 &";
+            $startCommand = "cd $nextAppPath && npm run start >> /tmp/nextjs.log 2>&1 &";
             if (file_exists($nextEnvPath)) {
                 $startCommand = "export \$(cat $nextEnvPath | xargs) && " . $startCommand;
             }
             
             exec($startCommand);
-            $success = 'ビルドと起動が完了しました。';
-        } else {
-            $error = 'ビルドに失敗しました。';
+            $output[] = "\n--- 起動コマンドを実行しました ---";
+            $output[] = "Next.jsアプリケーションがバックグラウンドで起動しています。";
         }
     } elseif ($action === 'stop') {
         // Next.jsプロセスの停止
         exec("pkill -f 'npm run start'", $output, $returnCode);
         exec("pkill -f 'next start'", $output, $returnCode);
-        $success = 'Next.jsアプリケーションを停止しました。';
+        $output[] = "Next.jsアプリケーションを停止しました。";
     } elseif ($action === 'status') {
         // プロセスの状態確認
         exec("ps aux | grep -E '(npm run start|next start)' | grep -v grep", $output, $returnCode);
