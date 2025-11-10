@@ -73,15 +73,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $scriptContent .= "export \$(cat $nextEnvPath | xargs)\n";
         }
         $scriptContent .= "npm run build > $logFile 2>&1\n";
-        $scriptContent .= "if [ \$? -eq 0 ]; then\n";
+        $scriptContent .= "BUILD_STATUS=\$?\n";
+        $scriptContent .= "echo \"\" >> $logFile\n";
+        $scriptContent .= "echo \"ビルド終了コード: \$BUILD_STATUS\" >> $logFile\n";
+        $scriptContent .= "echo \"\" >> $logFile\n";
+        $scriptContent .= "if [ -d \".next\" ]; then\n";
+        $scriptContent .= "  echo \".nextディレクトリが存在します\" >> $logFile\n";
+        $scriptContent .= "  ls -la .next >> $logFile 2>&1\n";
         $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  echo \"ビルド完了。起動を開始します...\" >> $logFile\n";
-        $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  sleep 2\n";
+        $scriptContent .= "  echo \"ビルド完了。5秒後に起動を開始します...\" >> $logFile\n";
+        $scriptContent .= "  sleep 5\n";
+        $scriptContent .= "  echo \"起動コマンド実行中...\" >> $logFile\n";
         $scriptContent .= "  npm run start >> $logFile 2>&1 &\n";
         $scriptContent .= "else\n";
-        $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  echo \"ビルドに失敗しました。\" >> $logFile\n";
+        $scriptContent .= "  echo \"エラー: .nextディレクトリが見つかりません\" >> $logFile\n";
+        $scriptContent .= "  echo \"カレントディレクトリの内容:\" >> $logFile\n";
+        $scriptContent .= "  ls -la >> $logFile 2>&1\n";
         $scriptContent .= "fi\n";
         
         file_put_contents($scriptPath, $scriptContent);
