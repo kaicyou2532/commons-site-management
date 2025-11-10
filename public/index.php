@@ -52,6 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exec("pkill -f 'npm run start'");
         exec("pkill -f 'next start'");
         
+        // 権限を修正（rootとして実行）
+        $output[] = "=== 権限修正中 ===";
+        exec("chown -R www-data:www-data $nextAppPath 2>&1", $chownOutput);
+        exec("chmod -R 775 $nextAppPath 2>&1", $chmodOutput);
+        exec("mkdir -p /var/www/.npm && chown -R www-data:www-data /var/www/.npm && chmod -R 775 /var/www/.npm 2>&1", $npmOutput);
+        $output = array_merge($output, $chownOutput, $chmodOutput, $npmOutput);
+        $output[] = "";
+        
         // 環境変数の設定
         $envCmd = '';
         if (file_exists($nextEnvPath)) {
