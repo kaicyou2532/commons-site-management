@@ -10,7 +10,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 RUN docker-php-ext-install pdo pdo_mysql
 
 # Enable Apache modules
-RUN a2enmod rewrite auth_digest
+RUN a2enmod rewrite auth_digest headers
 
 # Set working directory
 WORKDIR /var/www/html
