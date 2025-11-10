@@ -68,27 +68,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // デプロイスクリプトを作成
         $scriptPath = '/tmp/nextjs-deploy.sh';
         $scriptContent = "#!/bin/bash\n";
-        $scriptContent .= "cd $nextAppPath\n";
+        $scriptContent .= "set -e\n";
+        $scriptContent .= "cd $nextAppPath || exit 1\n\n";
         if (file_exists($nextEnvPath)) {
             $scriptContent .= "export \$(cat $nextEnvPath | xargs)\n";
         }
-        $scriptContent .= "npm run build > $logFile 2>&1\n";
-        $scriptContent .= "BUILD_STATUS=\$?\n";
+        $scriptContent .= "echo \"ビルドを開始します...\" > $logFile\n";
+        $scriptContent .= "echo \"\" >> $logFile\n\n";
+        $scriptContent .= "# ビルドを実行（完了まで待つ）\n";
+        $scriptContent .= "npm run build >> $logFile 2>&1\n";
+        $scriptContent .= "BUILD_EXIT_CODE=\$?\n\n";
         $scriptContent .= "echo \"\" >> $logFile\n";
-        $scriptContent .= "echo \"ビルド終了コード: \$BUILD_STATUS\" >> $logFile\n";
-        $scriptContent .= "echo \"\" >> $logFile\n";
-        $scriptContent .= "if [ -d \".next\" ]; then\n";
-        $scriptContent .= "  echo \".nextディレクトリが存在します\" >> $logFile\n";
-        $scriptContent .= "  ls -la .next >> $logFile 2>&1\n";
+        $scriptContent .= "echo \"========================================\" >> $logFile\n";
+        $scriptContent .= "echo \"ビルド終了コード: \$BUILD_EXIT_CODE\" >> $logFile\n";
+        $scriptContent .= "echo \"========================================\" >> $logFile\n";
+        $scriptContent .= "echo \"\" >> $logFile\n\n";
+        $scriptContent .= "# .nextディレクトリの存在確認\n";
+        $scriptContent .= "if [ \$BUILD_EXIT_CODE -eq 0 ] && [ -d \".next\" ] && [ -f \".next/BUILD_ID\" ]; then\n";
+        $scriptContent .= "  echo \"✓ ビルドが正常に完了しました\" >> $logFile\n";
+        $scriptContent .= "  echo \"✓ .nextディレクトリを確認しました\" >> $logFile\n";
         $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  echo \"ビルド完了。5秒後に起動を開始します...\" >> $logFile\n";
-        $scriptContent .= "  sleep 5\n";
-        $scriptContent .= "  echo \"起動コマンド実行中...\" >> $logFile\n";
-        $scriptContent .= "  npm run start >> $logFile 2>&1 &\n";
+        $scriptContent .= "  echo \"Next.jsアプリケーションを起動します...\" >> $logFile\n";
+        $scriptContent .= "  echo \"\" >> $logFile\n";
+        $scriptContent .= "  sleep 2\n";
+        $scriptContent .= "  nohup npm run start >> $logFile 2>&1 &\n";
+        $scriptContent .= "  echo \"起動コマンドを実行しました (PID: \$!)\" >> $logFile\n";
         $scriptContent .= "else\n";
-        $scriptContent .= "  echo \"エラー: .nextディレクトリが見つかりません\" >> $logFile\n";
-        $scriptContent .= "  echo \"カレントディレクトリの内容:\" >> $logFile\n";
+        $scriptContent .= "  echo \"✗ ビルドに失敗しました\" >> $logFile\n";
+        $scriptContent .= "  if [ ! -d \".next\" ]; then\n";
+        $scriptContent .= "    echo \"✗ .nextディレクトリが作成されませんでした\" >> $logFile\n";
+        $scriptContent .= "  fi\n";
+        $scriptContent .= "  echo \"\" >> $logFile\n";
+        $scriptContent .= "  echo \"現在のディレクトリ: \$(pwd)\" >> $logFile\n";
         $scriptContent .= "  ls -la >> $logFile 2>&1\n";
+        $scriptContent .= "  exit 1\n";
         $scriptContent .= "fi\n";
         
         file_put_contents($scriptPath, $scriptContent);
