@@ -47,112 +47,45 @@ $output = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    if ($action === 'build') {
-        // Next.jsのビルド
-        $command = "cd $nextAppPath && npm run build 2>&1";
-        if (file_exists($nextEnvPath)) {
-            $command = "export \$(cat $nextEnvPath | xargs) && " . $command;
-        }
-        
-        exec($command, $output, $returnCode);
-    } elseif ($action === 'start') {
-        // Next.jsの起動
-        $command = "cd $nextAppPath && npm run start >> /tmp/nextjs.log 2>&1 &";
-        if (file_exists($nextEnvPath)) {
-            $command = "export \$(cat $nextEnvPath | xargs) && " . $command;
-        }
-        
-        exec($command, $output, $returnCode);
-        $output[] = "Next.jsアプリケーションを起動しました。";
-    } elseif ($action === 'deploy') {
-        // ビルドと起動を連続実行（バックグラウンド）
-        // まず既存のプロセスを停止
+    if ($action === 'deploy') {
+        // 既存のプロセスを停止
         exec("pkill -f 'npm run start'");
         exec("pkill -f 'next start'");
         
-        // ログファイルをクリア
-        $logFile = '/tmp/nextjs-build.log';
-        file_put_contents($logFile, '');
-        
-        // デプロイスクリプトを作成
-        $scriptPath = '/tmp/nextjs-deploy.sh';
-        $scriptContent = "#!/bin/bash\n\n";
-        $scriptContent .= "cd $nextAppPath || exit 1\n\n";
+        // 環境変数の設定
+        $envCmd = '';
         if (file_exists($nextEnvPath)) {
-            $scriptContent .= "export \$(cat $nextEnvPath | xargs)\n\n";
+            $envCmd = "export \$(cat $nextEnvPath | xargs) && ";
         }
-        $scriptContent .= "echo \"ビルドを開始します...\" > $logFile\n";
-        $scriptContent .= "echo \"作業ディレクトリ: \$(pwd)\" >> $logFile\n";
-        $scriptContent .= "echo \"\" >> $logFile\n\n";
-        $scriptContent .= "# 古い.nextディレクトリを削除\n";
-        $scriptContent .= "if [ -d \".next\" ]; then\n";
-        $scriptContent .= "  echo \"既存の.nextディレクトリを削除します...\" >> $logFile\n";
-        $scriptContent .= "  rm -rf .next\n";
-        $scriptContent .= "fi\n\n";
-        $scriptContent .= "echo \"npm run buildを実行中...\" >> $logFile\n";
-        $scriptContent .= "echo \"\" >> $logFile\n\n";
-        $scriptContent .= "# タイムアウト付きでビルドを実行（5分）\n";
-        $scriptContent .= "timeout 300 npm run build >> $logFile 2>&1\n";
-        $scriptContent .= "BUILD_EXIT_CODE=\$?\n\n";
-        $scriptContent .= "echo \"\" >> $logFile\n";
-        $scriptContent .= "echo \"========================================\" >> $logFile\n";
-        $scriptContent .= "echo \"ビルド終了コード: \$BUILD_EXIT_CODE\" >> $logFile\n";
-        $scriptContent .= "echo \"========================================\" >> $logFile\n";
-        $scriptContent .= "echo \"\" >> $logFile\n\n";
-        $scriptContent .= "# ビルド結果の詳細確認\n";
-        $scriptContent .= "echo \".nextディレクトリの内容:\" >> $logFile\n";
-        $scriptContent .= "if [ -d \".next\" ]; then\n";
-        $scriptContent .= "  ls -laR .next >> $logFile 2>&1\n";
-        $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  if [ -f \".next/BUILD_ID\" ]; then\n";
-        $scriptContent .= "    echo \"✓ BUILD_IDファイルが存在します\" >> $logFile\n";
-        $scriptContent .= "    echo \"BUILD_ID: \$(cat .next/BUILD_ID)\" >> $logFile\n";
-        $scriptContent .= "  else\n";
-        $scriptContent .= "    echo \"✗ BUILD_IDファイルが見つかりません\" >> $logFile\n";
-        $scriptContent .= "  fi\n";
-        $scriptContent .= "else\n";
-        $scriptContent .= "  echo \"✗ .nextディレクトリが存在しません\" >> $logFile\n";
-        $scriptContent .= "fi\n";
-        $scriptContent .= "echo \"\" >> $logFile\n\n";
-        $scriptContent .= "# ビルドが成功した場合のみ起動\n";
-        $scriptContent .= "if [ \$BUILD_EXIT_CODE -eq 0 ] && [ -f \".next/BUILD_ID\" ]; then\n";
-        $scriptContent .= "  echo \"✓ ビルドが正常に完了しました\" >> $logFile\n";
-        $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  echo \"3秒後にNext.jsアプリケーションを起動します...\" >> $logFile\n";
-        $scriptContent .= "  sleep 3\n";
-        $scriptContent .= "  nohup npm run start >> $logFile 2>&1 &\n";
-        $scriptContent .= "  START_PID=\$!\n";
-        $scriptContent .= "  echo \"✓ 起動コマンドを実行しました (PID: \$START_PID)\" >> $logFile\n";
-        $scriptContent .= "else\n";
-        $scriptContent .= "  echo \"\" >> $logFile\n";
-        $scriptContent .= "  echo \"✗ ビルドが完了していません。起動をスキップします。\" >> $logFile\n";
-        $scriptContent .= "  exit 1\n";
-        $scriptContent .= "fi\n";
         
-        file_put_contents($scriptPath, $scriptContent);
-        chmod($scriptPath, 0755);
+        // npm install
+        $output[] = "=== npm install を実行中 ===";
+        $installCmd = "cd $nextAppPath && {$envCmd}npm install 2>&1";
+        exec($installCmd, $installOutput, $installCode);
+        $output = array_merge($output, $installOutput);
+        $output[] = "";
         
-        // スクリプトをバックグラウンドで実行
-        exec("bash $scriptPath > /dev/null 2>&1 &");
-        
-        $output[] = "ビルドと起動をバックグラウンドで実行中...";
-        $output[] = "進捗を確認するには「ログ確認」ボタンをクリックしてください。";
-    } elseif ($action === 'logs') {
-        // ログファイルの内容を表示
-        $logFile = '/tmp/nextjs-build.log';
-        if (file_exists($logFile)) {
-            $output = explode("\n", file_get_contents($logFile));
+        if ($installCode !== 0) {
+            $output[] = "エラー: npm install に失敗しました";
         } else {
-            $output[] = "ログファイルが見つかりません。";
+            // npm run build
+            $output[] = "=== npm run build を実行中 ===";
+            $buildCmd = "cd $nextAppPath && {$envCmd}npm run build 2>&1";
+            exec($buildCmd, $buildOutput, $buildCode);
+            $output = array_merge($output, $buildOutput);
+            $output[] = "";
+            
+            if ($buildCode !== 0) {
+                $output[] = "エラー: npm run build に失敗しました";
+            } else {
+                // npm run start（バックグラウンド）
+                $output[] = "=== npm run start を実行中 ===";
+                $startCmd = "cd $nextAppPath && {$envCmd}nohup npm run start > /tmp/nextjs.log 2>&1 &";
+                exec($startCmd);
+                $output[] = "Next.jsアプリケーションをバックグラウンドで起動しました";
+                $output[] = "http://localhost:3000 でアクセスできます";
+            }
         }
-    } elseif ($action === 'stop') {
-        // Next.jsプロセスの停止
-        exec("pkill -f 'npm run start'", $output, $returnCode);
-        exec("pkill -f 'next start'", $output, $returnCode);
-        $output[] = "Next.jsアプリケーションを停止しました。";
-    } elseif ($action === 'status') {
-        // プロセスの状態確認
-        exec("ps aux | grep -E '(npm run start|next start)' | grep -v grep", $output, $returnCode);
     }
 }
 
@@ -322,22 +255,7 @@ $isRunning = !empty($statusOutput);
         <form method="POST">
             <div class="buttons">
                 <button type="submit" name="action" value="deploy">
-                    ビルドして起動
-                </button>
-                <button type="submit" name="action" value="logs">
-                    ログ確認
-                </button>
-                <button type="submit" name="action" value="build">
-                    ビルド
-                </button>
-                <button type="submit" name="action" value="start">
-                    起動
-                </button>
-                <button type="submit" name="action" value="stop">
-                    停止
-                </button>
-                <button type="submit" name="action" value="status">
-                    状態確認
+                    デプロイ実行
                 </button>
             </div>
         </form>
@@ -352,12 +270,13 @@ $isRunning = !empty($statusOutput);
         <div class="info">
             <h3>使い方</h3>
             <p>
-                <strong>ビルドして起動:</strong> バックグラウンドでビルドと起動を実行<br>
-                <strong>ログ確認:</strong> ビルドとデプロイの進捗ログを表示<br>
-                <strong>ビルド:</strong> Next.jsアプリケーションをビルド<br>
-                <strong>起動:</strong> ビルド済みアプリケーションを起動<br>
-                <strong>停止:</strong> 実行中のアプリケーションを停止<br>
-                <strong>状態確認:</strong> 現在のプロセス状態を確認
+                <strong>デプロイ実行</strong>ボタンをクリックすると、以下の処理が順次実行されます：<br>
+                1. 既存のNext.jsプロセスを停止<br>
+                2. npm install で依存関係をインストール<br>
+                3. npm run build でアプリケーションをビルド<br>
+                4. npm run start でアプリケーションを起動<br>
+                <br>
+                起動後は <strong>http://localhost:3000</strong> でアクセスできます。
             </p>
         </div>
     </div>
