@@ -65,13 +65,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $logFile = '/tmp/nextjs-build.log';
         file_put_contents($logFile, '');
         
-        // ビルドと起動をバックグラウンドで実行
-        $deployCommand = "cd $nextAppPath && npm run build > $logFile 2>&1 && npm run start >> $logFile 2>&1 &";
+        // デプロイスクリプトを作成
+        $scriptPath = '/tmp/nextjs-deploy.sh';
+        $scriptContent = "#!/bin/bash\n";
+        $scriptContent .= "cd $nextAppPath\n";
         if (file_exists($nextEnvPath)) {
-            $deployCommand = "export \$(cat $nextEnvPath | xargs) && " . $deployCommand;
+            $scriptContent .= "export \$(cat $nextEnvPath | xargs)\n";
         }
+        $scriptContent .= "npm run build > $logFile 2>&1\n";
+        $scriptContent .= "if [ \$? -eq 0 ]; then\n";
+        $scriptContent .= "  echo \"\" >> $logFile\n";
+        $scriptContent .= "  echo \"ビルド完了。起動を開始します...\" >> $logFile\n";
+        $scriptContent .= "  echo \"\" >> $logFile\n";
+        $scriptContent .= "  sleep 2\n";
+        $scriptContent .= "  npm run start >> $logFile 2>&1 &\n";
+        $scriptContent .= "else\n";
+        $scriptContent .= "  echo \"\" >> $logFile\n";
+        $scriptContent .= "  echo \"ビルドに失敗しました。\" >> $logFile\n";
+        $scriptContent .= "fi\n";
         
-        exec($deployCommand . " > /dev/null 2>&1 &");
+        file_put_contents($scriptPath, $scriptContent);
+        chmod($scriptPath, 0755);
+        
+        // スクリプトをバックグラウンドで実行
+        exec("bash $scriptPath > /dev/null 2>&1 &");
         
         $output[] = "ビルドと起動をバックグラウンドで実行中...";
         $output[] = "進捗を確認するには「ログ確認」ボタンをクリックしてください。";
