@@ -1,0 +1,34 @@
+# Git管理対象外ファイル
+
+# 環境変数
+.env
+env/next.env
+
+# Digest認証ファイル
+docker/htpasswd
+
+# Node.js
+next-app/node_modules/
+next-app/.next/
+next-app/out/
+next-app/.env*.local
+
+# ログ
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+docker-compose.override.yml

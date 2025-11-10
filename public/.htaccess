@@ -1,0 +1,15 @@
+# Digest認証設定
+AuthType Digest
+AuthName "Commons Management Area"
+AuthUserFile /etc/apache2/.htpasswd
+Require valid-user
+
+# PHP設定
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# セキュリティヘッダー
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
