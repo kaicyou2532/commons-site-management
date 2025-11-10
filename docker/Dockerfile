@@ -20,7 +20,10 @@ COPY docker/apache-config.conf /etc/apache2/sites-available/000-default.conf
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+    && chmod -R 755 /var/www/html \
+    && mkdir -p /var/www/next-app \
+    && chown -R www-data:www-data /var/www/next-app \
+    && chmod -R 775 /var/www/next-app
 
 EXPOSE 80
 

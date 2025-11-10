@@ -12,3 +12,7 @@ docker-compose up -d --build
 
 # ログを確認
 docker logs commons-web --tail 20
+
+
+
+docker system prune -a -f --volumes
